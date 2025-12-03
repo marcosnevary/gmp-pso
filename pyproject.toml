@@ -1,0 +1,36 @@
+[project]
+name = "psox"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.3.5",
+]
+
+[tool.ruff]
+indent-width = 4
+line-length = 88
+select = [
+"ALL",
+]
+ignore = [
+"D100",
+"D101",
+"D102",
+"D103",
+"D107",
+"T201",
+"PLR0913",
+"S311"
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 88  
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
