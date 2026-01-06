@@ -1,105 +1,80 @@
+from typing import NamedTuple
+
 import numpy as np
 
 
-class VectorizedPSO:
-    def __init__(
-        self,
-        fitness_function: callable,
-        search_space_bounds: tuple,
-        seed: int,
-        num_dimensions: int,
-        num_particles: int,
-        max_iterations: int,
-        cognitive_coefficient: float,
-        social_coefficient: float,
-        inertia_weight: float,
-    ) -> None:
-        self.fitness_function = fitness_function
-        self.search_space_bounds = search_space_bounds
-        self.rng = np.random.default_rng(seed)
+class SwarmState(NamedTuple):
+    positions: np.ndarray
+    velocities: np.ndarray
+    p_best_pos: np.ndarray
+    p_best_fit: np.ndarray
+    g_best_pos: np.ndarray
+    g_best_fit: np.ndarray
+    rng: np.random.Generator
 
-        self.num_dimensions = num_dimensions
-        self.num_particles = num_particles
-        self.max_iterations = max_iterations
-        self.cognitive_coefficient = cognitive_coefficient
-        self.social_coefficient = social_coefficient
-        self.inertia_weight = inertia_weight
+def vectorized_pso(
+    objective_fn: callable,
+    bounds: tuple,
+    num_dims: int,
+    num_particles: int,
+    max_iters: int,
+    c1: float,
+    c2: float,
+    w: float,
+    seed: int,
+) -> tuple:
+    lower, upper = bounds
+    rng = np.random.default_rng(seed)
 
-        self.positions = []
-        self.velocities = []
-        self.personal_best_positions = []
-        self.personal_best_fitness = []
-        self.global_best_position = None
-        self.global_best_fitness = float('inf')
+    init_positions = rng.uniform(lower, upper, (num_particles, num_dims))
+    init_velocities = rng.uniform(-1.0, 1.0, (num_particles, num_dims))
+    init_fitness = np.array([objective_fn(pos) for pos in init_positions])
 
-    def _initialize_particles(self) -> None:
-        lower, upper = self.search_space_bounds
+    best_idx = np.argmin(init_fitness)
+    g_best_pos = init_positions[best_idx]
+    g_best_fit = init_fitness[best_idx]
 
-        self.positions = self.rng.uniform(
-            low=lower,
-            high=upper,
-            size=(self.num_particles, self.num_dimensions),
+    swarm_state = SwarmState(
+        positions=init_positions,
+        velocities=init_velocities,
+        p_best_pos=init_positions,
+        p_best_fit=init_fitness,
+        g_best_pos=g_best_pos,
+        g_best_fit=g_best_fit,
+        rng=rng,
+    )
+
+    for _ in range(max_iters):
+        r1 = swarm_state.rng.random((num_particles, num_dims))
+        r2 = swarm_state.rng.random((num_particles, num_dims))
+
+        inertia = w * swarm_state.velocities
+        cognitive = c1 * r1 * (swarm_state.p_best_pos - swarm_state.positions)
+        social = c2 * r2 * (swarm_state.g_best_pos - swarm_state.positions)
+
+        new_velocities = inertia + cognitive + social
+        new_positions = swarm_state.positions + new_velocities
+        new_positions = np.clip(new_positions, lower, upper)
+
+        current_fitness = np.array([objective_fn(pos) for pos in new_positions])
+
+        improved = current_fitness < swarm_state.p_best_fit
+        mask = improved[:, None]
+        new_p_best_pos = np.where(mask, new_positions, swarm_state.p_best_pos)
+        new_p_best_fit = np.where(improved, current_fitness, swarm_state.p_best_fit)
+
+        best_idx = np.argmin(current_fitness)
+        new_g_best_pos = new_positions[best_idx].copy()
+        new_g_best_fit = current_fitness[best_idx]
+
+        swarm_state = SwarmState(
+            positions=new_positions,
+            velocities=new_velocities,
+            p_best_pos=new_p_best_pos,
+            p_best_fit=new_p_best_fit,
+            g_best_pos=new_g_best_pos,
+            g_best_fit=new_g_best_fit,
+            rng=swarm_state.rng,
         )
 
-        self.velocities = self.rng.uniform(
-            low=-1,
-            high=1,
-            size=(self.num_particles, self.num_dimensions),
-        )
-
-        self.personal_best_positions = self.positions.copy()
-
-        self.personal_best_fitness = np.array(
-            [self.fitness_function(pos) for pos in self.positions],
-        )
-
-        best_index = np.argmin(self.personal_best_fitness)
-        self.global_best_position = self.personal_best_positions[best_index].copy()
-        self.global_best_fitness = self.personal_best_fitness[best_index]
-
-    def _update_velocities(self) -> None:
-        r1 = self.rng.random(size=(self.num_particles, 1))
-        r2 = self.rng.random(size=(self.num_particles, 1))
-
-        inertia = self.inertia_weight * self.velocities
-
-        cognitive = (
-            self.cognitive_coefficient
-            * r1
-            * (self.personal_best_positions - self.positions)
-        )
-
-        social = (
-            self.social_coefficient * r2 * (self.global_best_position - self.positions)
-        )
-
-        self.velocities = inertia + cognitive + social
-
-    def _update_positions(self) -> None:
-        lower, upper = self.search_space_bounds
-
-        self.positions = self.positions + self.velocities
-        self.positions = np.clip(self.positions, lower, upper)
-
-    def _update_personal_global_best(self) -> None:
-        current_fitness = np.array(
-            [self.fitness_function(pos) for pos in self.positions],
-        )
-
-        improved = current_fitness < self.personal_best_fitness
-        self.personal_best_positions[improved] = self.positions[improved].copy()
-        self.personal_best_fitness[improved] = current_fitness[improved]
-
-        best_index = np.argmin(current_fitness)
-        if current_fitness[best_index] < self.global_best_fitness:
-            self.global_best_position = self.positions[best_index].copy()
-            self.global_best_fitness = current_fitness[best_index]
-
-    def optimize(self) -> tuple:
-        self._initialize_particles()
-        for _ in range(self.max_iterations):
-            self._update_velocities()
-            self._update_positions()
-            self._update_personal_global_best()
-
-        return self.global_best_position, self.global_best_fitness
+    return swarm_state.g_best_pos, swarm_state.g_best_fit
