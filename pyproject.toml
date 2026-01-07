@@ -16,7 +16,7 @@ nvidia = [
 	"jax[cuda13]>=0.8.2",
 ]
 intel = [
-	"",
+	"jax>=0.8.2"
 ]
 
 [tool.ruff]
