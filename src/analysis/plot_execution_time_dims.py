@@ -4,7 +4,14 @@ import seaborn as sns
 
 
 def plot_execution_time_dims(df: pd.DataFrame) -> None:
-    _, axes = plt.subplots(3, 3, figsize=(20, 5 * 4))
+    fig, axes = plt.subplots(
+        3,
+        3,
+        figsize=(7, 7),
+        constrained_layout=True,
+        sharex=True,
+        sharey=True,
+    )
     axes_flat = axes.flatten()
 
     for i, benchmark in enumerate(df['Benchmark'].unique()):
@@ -22,27 +29,33 @@ def plot_execution_time_dims(df: pd.DataFrame) -> None:
         )
 
         ax.set_title(
-            f'Execution Time Comparison ({benchmark})',
-            pad=30,
+            f'{benchmark}',
             loc='left',
-            fontsize=14,
             fontweight='bold',
         )
 
-        ax.legend(
-            loc='upper left',
-            bbox_to_anchor=(-0.02, 1.07),
-            ncol=3,
-            frameon=False,
-            fontsize=10,
-        )
-
         ax.set_yscale('log')
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+
+        ax.get_legend().remove()
         sns.despine(left=True)
 
-    plt.tight_layout()
-    plt.savefig(
-        f'../results/plots/execution-time-dims/execution_time_dims_{benchmark}.png',
+    fig.supxlabel('Dimension', fontsize=8)
+    fig.supylabel('Mean of Execution Times (s)', fontsize=8)
+
+    handles, labels = axes_flat[0].get_legend_handles_labels()
+    fig.legend(
+        handles,
+        labels,
+        loc='upper center',
+        bbox_to_anchor=(0.5, 1.05),
+        ncol=3,
+        frameon=False,
+    )
+
+    fig.savefig(
+        '../results/plots/execution-time-dims/execution_time_dims.pdf',
         dpi=300,
         bbox_inches='tight',
     )

@@ -4,14 +4,13 @@ import seaborn as sns
 
 
 def plot_execution_time_bars(df: pd.DataFrame) -> None:
-    plt.rcParams.update({'font.size': 8, 'axes.titlesize': 9, 'legend.fontsize': 7})
-
     fig, axes = plt.subplots(
         3,
         3,
-        figsize=(7.2, 9.5),
+        figsize=(7, 7),
         constrained_layout=True,
         sharex=True,
+        sharey=True,
     )
     axes_flat = axes.flatten()
 
@@ -31,24 +30,27 @@ def plot_execution_time_bars(df: pd.DataFrame) -> None:
         )
 
         ax.set_title(
-            f'Execution Time Comparison ({dim}D)',
-            loc='right',
+            f'Dimension = {dim}',
+            loc='left',
             fontweight='bold',
         )
 
         ax.set_xscale('log')
-        ax.set_xlabel('Execution Time (s)')
+        ax.set_xlabel('')
         ax.set_ylabel('')
 
         ax.get_legend().remove()
-        sns.despine(left=True, bottom=True)
+        sns.despine(ax=ax)
+
+    fig.supxlabel('Mean of Execution Times (s)', fontsize=8)
+    fig.supylabel('Benchmarks', fontsize=8)
 
     handles, labels = axes_flat[0].get_legend_handles_labels()
     fig.legend(
         handles,
         labels,
         loc='upper center',
-        bbox_to_anchor=(0.5, 1.02),
+        bbox_to_anchor=(0.5, 1.05),
         ncol=3,
         frameon=False,
     )

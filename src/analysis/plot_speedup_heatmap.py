@@ -4,7 +4,14 @@ import seaborn as sns
 
 
 def plot_speedup_heatmap(df: pd.DataFrame) -> None:
-    _, axes = plt.subplots(3, 3, figsize=(20, 5 * 4))
+    fig, axes = plt.subplots(
+        3,
+        3,
+        figsize=(7, 7),
+        constrained_layout=True,
+        sharex=True,
+        sharey=True,
+    )
     axes_flat = axes.flatten()
 
     for i, dim in enumerate(df['Dimension'].unique()):
@@ -41,22 +48,23 @@ def plot_speedup_heatmap(df: pd.DataFrame) -> None:
         sns.heatmap(
             data=df_speedup,
             annot=True,
-            fmt='.2f',
+            annot_kws={'size': 6},
+            fmt='.1f',
             cmap='viridis',
             ax=ax,
+            cbar=(i in {2, 5, 8}),
+            cbar_kws={'label': 'Speedup Factor'},
         )
 
-        plt.title(
-            f'Speedup Heatmap ({dim}d)',
-            pad=30,
-            loc='left',
-            fontsize=14,
-            fontweight='bold',
-        )
+        ax.set_title(f'Dimension = {dim}', loc='left', fontweight='bold')
+        ax.set_xlabel('')
+        ax.set_ylabel('')
 
-    plt.tight_layout()
-    plt.savefig(
-        f'../results/plots/speedup-heatmap/speedup_heatmap_{dim}d.png',
+    fig.supxlabel('Reference Algorithm')
+    fig.supylabel('Target Algorithm')
+
+    fig.savefig(
+        '../results/plots/speedup-heatmap/speedup_heatmap.pdf',
         dpi=300,
         bbox_inches='tight',
     )
