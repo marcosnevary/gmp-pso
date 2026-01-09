@@ -1,3 +1,4 @@
+from functools import partial
 from typing import NamedTuple
 
 import jax.numpy as jnp
@@ -13,8 +14,9 @@ class SwarmState(NamedTuple):
     g_best_fit: jnp.ndarray
     rng: random.PRNGKey
 
-@jit(
-     static_argnames=(
+@partial(
+    jit,
+    static_argnames=(
         'objective_fn',
         'bounds',
         'num_dims',

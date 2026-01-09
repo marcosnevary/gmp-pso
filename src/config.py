@@ -12,11 +12,11 @@ from .benchmarks.sphere import SPHERE_BOUNDS, sphere_fn
 from .benchmarks.styblinski_tang import STYBLINSKI_TANG_BOUNDS, styblinski_tang_fn
 
 config = {
-    'dims': [2, 10, 30, 50], # , 100, 250, 500, 750, 1000
+    'dims': [2, 10, 30, 50, 100, 250, 500, 750, 1000],
     'params': {
         'num_dims': None,
         'num_particles': 100, # 100
-        'max_iters': 100, # 500
+        'max_iters': 500, # 500
         'c1': 2,
         'c2': 2,
         'w': 0.7,
@@ -34,10 +34,10 @@ config = {
         'Alpine': (alpine_fn, ALPINE_BOUNDS),
         'Griewank': (griewank_fn, GRIEWANK_BOUNDS),
         'Rastrigin': (rastrigin_fn, RASTRIGIN_BOUNDS),
-        # 'Rosenbrock': (rosenbrock_fn, ROSENBROCK_BOUNDS),
-        # 'Salomon': (salomon_fn, SALOMON_BOUNDS),
-        # 'Schwefel': (schwefel_fn, SCHWEFEL_BOUNDS),
-        # 'Sphere': (sphere_fn, SPHERE_BOUNDS),
-        # 'Styblinski-Tang': (styblinski_tang_fn, STYBLINSKI_TANG_BOUNDS),
+        'Rosenbrock': (rosenbrock_fn, ROSENBROCK_BOUNDS),
+        'Salomon': (salomon_fn, SALOMON_BOUNDS),
+        'Schwefel': (schwefel_fn, SCHWEFEL_BOUNDS),
+        'Sphere': (sphere_fn, SPHERE_BOUNDS),
+        'Styblinski-Tang': (styblinski_tang_fn, STYBLINSKI_TANG_BOUNDS),
     },
 }
