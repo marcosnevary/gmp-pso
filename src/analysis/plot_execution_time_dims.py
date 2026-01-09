@@ -25,8 +25,22 @@ def plot_execution_time_dims(df: pd.DataFrame) -> None:
             hue='Algorithm',
             marker='o',
             palette='viridis',
-            ax=ax,
+            ax=ax
         )
+
+        algorithms = df_benchmark['Algorithm'].unique()
+        colors = sns.color_palette('viridis', n_colors=len(algorithms))
+
+        for i, algorithm in enumerate(algorithms):
+            data_algorithm = df_benchmark[df_benchmark['Algorithm'] == algorithm]
+            
+            ax.fill_between(
+                data_algorithm['Dimension'],
+                data_algorithm['Mean of Execution Times (s)'] - data_algorithm['Standard Deviation of Execution Times (s)'],
+                data_algorithm['Mean of Execution Times (s)'] + data_algorithm['Standard Deviation of Execution Times (s)'],
+                color=colors[i],
+                alpha=0.2
+            )
 
         ax.set_title(
             f'{benchmark}',
