@@ -10,18 +10,9 @@ def setup_styles(config: dict) -> None:
     regular = config['font_path'] / 'LibreFranklin-Regular.ttf'
     bold = config['font_path'] / 'LibreFranklin-Bold.ttf'
 
-    # 1. Carrega os arquivos
     fm.fontManager.addfont(str(regular))
     fm.fontManager.addfont(str(bold))
 
-    # 2. Descobre o nome interno da fonte (ex: "Libre Franklin")
-    # Isso é mais seguro que chutar o nome da string
-    prop = fm.FontProperties(fname=str(regular))
-    font_name = prop.get_name()
-
-    # 3. Define essa fonte como a família padrão globalmente
-    config['font']['font.family'] = font_name
-    # 4. Atualiza o rcParams
     plt.rcParams.update(config['font'])
 
 def _save_figure(fig: plt.Figure, filename: str, config: dict) -> None:
@@ -215,6 +206,7 @@ def generate_visualizations(df: pd.DataFrame) -> None:
             'axes.labelsize': 10,
             'xtick.labelsize': 7.5,
             'ytick.labelsize': 7.5,
+            'font.family': 'Libre Franklin',
         },
     }
 
