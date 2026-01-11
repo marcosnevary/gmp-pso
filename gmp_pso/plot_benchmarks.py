@@ -196,7 +196,7 @@ def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
 
 def generate_visualizations(df: pd.DataFrame) -> None:
     config = {
-        'font_path': Path('./fonts/Libre_Franklin/static/'),
+        'font_path': Path('./fonts/'),
         'output_path': Path('./results/'),
         'palette': 'viridis',
         'font': {
