@@ -2,7 +2,7 @@ from functools import partial
 from typing import NamedTuple
 
 import jax.numpy as jnp
-from jax import jit, lax, random
+from jax import grad, jit, lax, random, vmap
 
 
 class SwarmState(NamedTuple):
@@ -13,6 +13,8 @@ class SwarmState(NamedTuple):
     g_best_pos: jnp.ndarray
     g_best_fit: jnp.ndarray
     rng: random.PRNGKey
+    history: jnp.ndarray
+    i: int
 
 @partial(
     jit,
@@ -25,6 +27,7 @@ class SwarmState(NamedTuple):
         'c1',
         'c2',
         'w',
+        'eta',
     ),
 )
 def jax_pso(
@@ -37,6 +40,7 @@ def jax_pso(
     c2: float,
     w: float,
     key: random.PRNGKey,
+    eta: float,
 ) -> tuple:
     lower, upper = bounds
     k_pos, k_vel, k_state = random.split(key, 3)
@@ -47,11 +51,15 @@ def jax_pso(
     init_velocities = random.uniform(
         k_vel, (num_particles, num_dims), minval=-1.0, maxval=1.0,
     )
-    init_fitness = objective_fn(init_positions)
+    init_fitness = vmap(objective_fn)(init_positions)
 
     best_idx = jnp.argmin(init_fitness)
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
+
+    i = 0
+    history = jnp.zeros(max_iters)
+    history = history.at[i].set(g_best_fit)
 
     initial_state = SwarmState(
         positions=init_positions,
@@ -61,6 +69,8 @@ def jax_pso(
         g_best_pos=g_best_pos,
         g_best_fit=g_best_fit,
         rng=k_state,
+        history=history,
+        i=i,
     )
 
     def update_step(swarm_state: SwarmState, _: None) -> tuple:
@@ -76,7 +86,7 @@ def jax_pso(
         new_positions = swarm_state.positions + new_velocities
         new_positions = jnp.clip(new_positions, lower, upper)
 
-        new_fitness = objective_fn(new_positions)
+        new_fitness = vmap(objective_fn)(new_positions)
 
         improved = new_fitness < swarm_state.p_best_fit
         mask = improved[:, None]
@@ -93,6 +103,44 @@ def jax_pso(
             global_improved, current_g_best_fit, swarm_state.g_best_fit,
         )
 
+        # def gradient_descent_step(
+        #         g_best_pos: jnp.array,
+        #         gradient_fn: callable,
+        #         lower: float,
+        #         upper: float,
+        #         eta: float,
+        #     ) -> jnp.array:
+        #     gradient = gradient_fn(g_best_pos)
+        #     new_g_best_pos = g_best_pos - eta * gradient
+        #     return jnp.clip(new_g_best_pos, lower, upper)
+
+        # gradient_fn = grad(objective_fn)
+
+        # gradient = gradient_fn(new_g_best_pos)
+        # new_g_best_pos = new_g_best_pos - eta * gradient
+        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
+
+        # gradient = gradient_fn(new_g_best_pos)
+        # new_g_best_pos = new_g_best_pos - eta * gradient
+        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
+
+        # gradient = gradient_fn(new_g_best_pos)
+        # new_g_best_pos = new_g_best_pos - eta * gradient
+        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
+
+        # gradient = gradient_fn(new_g_best_pos)
+        # new_g_best_pos = new_g_best_pos - eta * gradient
+        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
+
+        # gradient = gradient_fn(new_g_best_pos)
+        # new_g_best_pos = new_g_best_pos - eta * gradient
+        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
+
+        # new_g_best_fit = objective_fn(new_g_best_pos)
+
+        i = swarm_state.i + 1
+        new_history = swarm_state.history.at[i].set(new_g_best_fit)
+
         next_state = SwarmState(
             positions=new_positions,
             velocities=new_velocities,
@@ -101,9 +149,11 @@ def jax_pso(
             g_best_pos=new_g_best_pos,
             g_best_fit=new_g_best_fit,
             rng=k_next,
+            history=new_history,
+            i=i,
         )
 
         return next_state, None
 
     final_state, _ = lax.scan(update_step, initial_state, None, max_iters)
-    return final_state.g_best_pos, final_state.g_best_fit
+    return final_state.g_best_pos, final_state.g_best_fit, final_state.history

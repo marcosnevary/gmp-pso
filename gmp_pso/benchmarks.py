@@ -25,51 +25,41 @@ def sphere_py(x: list) -> float:
 def rosenbrock_py(x: list) -> float:
     return sum(100 * (x[i+1] - x[i]**2)**2 + (x[i] - 1)**2 for i in range(len(x) - 1))
 
-def ackley_np(x: np.ndarray) -> np.ndarray:
-    n = x.shape[-1]
-    sum1 = np.sum(x**2, axis=-1)
-    sum2 = np.sum(np.cos(2 * np.pi * x), axis=-1)
+def ackley_np(x: np.ndarray) -> float:
+    n = x.shape[0]
+    sum1 = np.sum(x**2)
+    sum2 = np.sum(np.cos(2 * np.pi * x))
     return -20 * np.exp(-0.2 * np.sqrt(sum1 / n)) - np.exp(sum2 / n) + 20 + np.e
 
-def rastrigin_np(x: np.ndarray) -> np.ndarray:
-    n = x.shape[-1]
-    return 10 * n + np.sum(x**2 - 10 * np.cos(2 * np.pi * x), axis=-1)
+def rastrigin_np(x: np.ndarray) -> float:
+    n = x.shape[0]
+    return 10 * n + np.sum(x**2 - 10 * np.cos(2 * np.pi * x))
 
-def sphere_np(x: np.ndarray) -> np.ndarray:
-    return np.sum(x**2, axis=-1)
+def sphere_np(x: np.ndarray) -> float:
+    return np.sum(x**2)
 
-def rosenbrock_np(x: np.ndarray) -> np.ndarray:
-    return np.sum(
-        100 * (x[..., 1:] - x[..., :-1]**2)**2 + (1 - x[..., :-1])**2, axis=-1,
-    )
+def rosenbrock_np(x: np.ndarray) -> float:
+    return np.sum(100 * (x[1:] - x[:-1]**2)**2 + (1 - x[:-1])**2)
 
 @jit
 def ackley_jax(x: jnp.ndarray) -> jnp.ndarray:
-    n = x.shape[-1]
-    sum1 = jnp.sum(x**2, axis=-1)
-    sum2 = jnp.sum(jnp.cos(2 * jnp.pi * x), axis=-1)
+    n = x.shape[0]
+    sum1 = jnp.sum(x**2)
+    sum2 = jnp.sum(jnp.cos(2 * jnp.pi * x))
     return -20 * jnp.exp(-0.2 * jnp.sqrt(sum1 / n)) - jnp.exp(sum2 / n) + 20 + jnp.e
 
 @jit
 def rastrigin_jax(x: jnp.ndarray) -> jnp.ndarray:
-    n = x.shape[-1]
-    return 10 * n + jnp.sum(x**2 - 10 * jnp.cos(2 * jnp.pi * x), axis=-1)
+    n = x.shape[0]
+    return 10 * n + jnp.sum(x**2 - 10 * jnp.cos(2 * jnp.pi * x))
 
 @jit
 def sphere_jax(x: jnp.ndarray) -> jnp.ndarray:
-    return jnp.sum(x**2, axis=-1)
+    return jnp.sum(x**2)
 
 @jit
 def rosenbrock_jax(x: jnp.ndarray) -> jnp.ndarray:
-    return jnp.sum(
-        100 * (x[..., 1:] - x[..., :-1]**2)**2 + (1 - x[..., :-1])**2, axis=-1,
-    )
-
-ALGORITHMS = {
-    'Python PSO': python_pso,
-    'NumPy PSO': numpy_pso,
-    'JAX PSO': parallel_jax_pso,
-}
+    return jnp.sum(100 * (x[1:] - x[:-1]**2)**2 + (1 - x[:-1])**2)
 
 BENCHMARKS = {
     'Ackley': {
@@ -98,17 +88,24 @@ BENCHMARKS = {
     },
 }
 
-DIMS = [2, 4, 8, 16, 32, 64, 128, 256, 512]
+ALGORITHMS = {
+    # 'Python PSO': python_pso,
+    # 'NumPy PSO': numpy_pso,
+    'JAX PSO': parallel_jax_pso,
+}
+
+DIMS = [500] # 2, 4, 8, 16, 32, 64, 128, 256,
 
 HYPERPARAMETERS = {
     'num_dims': None,
-    'num_particles': 100,
-    'max_iters': 500,
-    'c1': 2,
-    'c2': 2,
-    'w': 0.7,
+    'num_particles': 10000,
+    'max_iters': 1000,
+    'c1': 2.5,
+    'c2': 1.5,
+    'w': 0.4,
     'seed': 42,
+    'eta': 0.01,
     'num_subswarms': 1,
 }
 
-NUM_RUNS = 5
+NUM_RUNS = 1

@@ -10,6 +10,7 @@ class SwarmState(NamedTuple):
     g_best_pos: list
     g_best_fit: float
     rng: random.Random
+    history: list
 
 def python_pso(
     objective_fn: callable,
@@ -39,6 +40,8 @@ def python_pso(
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
 
+    history = [g_best_fit]
+
     swarm_state = SwarmState(
         positions=init_positions,
         velocities=init_velocities,
@@ -47,6 +50,7 @@ def python_pso(
         g_best_pos=g_best_pos,
         g_best_fit=g_best_fit,
         rng=rng,
+        history=history,
     )
 
     for _ in range(max_iters):
@@ -114,6 +118,8 @@ def python_pso(
                 new_g_best_pos = new_positions[i][:]
                 new_g_best_fit = current_fitness[i]
 
+        new_history = swarm_state.history.append(new_g_best_fit)
+
         swarm_state = SwarmState(
             positions=new_positions,
             velocities=new_velocities,
@@ -122,6 +128,7 @@ def python_pso(
             g_best_pos=new_g_best_pos,
             g_best_fit=new_g_best_fit,
             rng=swarm_state.rng,
+            history=new_history,
         )
 
-    return swarm_state.g_best_pos, swarm_state.g_best_fit
+    return swarm_state.g_best_pos, swarm_state.g_best_fit, swarm_state.history

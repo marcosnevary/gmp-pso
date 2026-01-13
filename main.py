@@ -41,8 +41,8 @@ def run_experiment() -> list[dict]:
                     end = time.perf_counter()
                     execution_times.append(end - start)
 
-                mean_time = float(jnp.mean(jnp.array(execution_times[1:])))
-                std_time = float(jnp.std(jnp.array(execution_times[1:])))
+                mean_time = float(jnp.mean(jnp.array(execution_times)))
+                std_time = float(jnp.std(jnp.array(execution_times)))
 
                 results.extend(
                     [
@@ -53,6 +53,7 @@ def run_experiment() -> list[dict]:
                             'Execution Times': execution_times,
                             'Mean of Execution Times (s)': mean_time,
                             'Standard Deviation of Execution Times (s)': std_time,
+                            'Last Convergence History': result[2],
                         },
                     ],
                 )

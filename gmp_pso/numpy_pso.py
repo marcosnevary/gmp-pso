@@ -11,6 +11,7 @@ class SwarmState(NamedTuple):
     g_best_pos: np.ndarray
     g_best_fit: np.ndarray
     rng: np.random.Generator
+    history: np.ndarray
 
 def numpy_pso(
     objective_fn: callable,
@@ -29,11 +30,13 @@ def numpy_pso(
 
     init_positions = rng.uniform(lower, upper, (num_particles, num_dims))
     init_velocities = rng.uniform(-1.0, 1.0, (num_particles, num_dims))
-    init_fitness = objective_fn(init_positions)
+    init_fitness = np.array([objective_fn(position) for position in init_positions])
 
     best_idx = np.argmin(init_fitness)
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
+
+    history = np.array([g_best_fit])
 
     swarm_state = SwarmState(
         positions=init_positions,
@@ -43,6 +46,7 @@ def numpy_pso(
         g_best_pos=g_best_pos,
         g_best_fit=g_best_fit,
         rng=rng,
+        history=history,
     )
 
     for _ in range(max_iters):
@@ -68,6 +72,8 @@ def numpy_pso(
         new_g_best_pos = new_positions[best_idx].copy()
         new_g_best_fit = current_fitness[best_idx]
 
+        new_history = np.append(swarm_state.history, new_g_best_fit)
+
         swarm_state = SwarmState(
             positions=new_positions,
             velocities=new_velocities,
@@ -76,6 +82,7 @@ def numpy_pso(
             g_best_pos=new_g_best_pos,
             g_best_fit=new_g_best_fit,
             rng=swarm_state.rng,
+            history=new_history,
         )
 
-    return swarm_state.g_best_pos, swarm_state.g_best_fit
+    return swarm_state.g_best_pos, swarm_state.g_best_fit, swarm_state.history

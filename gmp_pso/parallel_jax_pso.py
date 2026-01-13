@@ -14,6 +14,7 @@ def parallel_jax_pso(
     c2: float,
     w: float,
     seed: int,
+    eta: float,
     num_subswarms: int,
 ) -> tuple:
     key = random.PRNGKey(seed)
@@ -21,10 +22,10 @@ def parallel_jax_pso(
 
     parallel_pso = vmap(
         jax_pso,
-        in_axes=(None, None, None, None, None, None, None, None, 0),
+        in_axes=(None, None, None, None, None, None, None, None, 0, None),
     )
 
-    all_best_positions, all_best_fitnesses = parallel_pso(
+    all_best_positions, all_best_fitnesses, all_histories = parallel_pso(
         objective_fn,
         bounds,
         num_dims,
@@ -34,6 +35,7 @@ def parallel_jax_pso(
         c2,
         w,
         keys,
+        eta,
     )
 
     idx_best_subwarm = jnp.argmin(all_best_fitnesses)
@@ -41,6 +43,6 @@ def parallel_jax_pso(
     best_position = all_best_positions[idx_best_subwarm]
     best_fitness = all_best_fitnesses[idx_best_subwarm]
 
-    result = (best_position, best_fitness)
+    result = (best_position, best_fitness, all_histories)
 
     return block_until_ready(result)
