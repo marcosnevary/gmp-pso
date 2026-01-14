@@ -1,3 +1,4 @@
+import ast
 from pathlib import Path
 
 import matplotlib.font_manager as fm
@@ -23,8 +24,8 @@ def _save_figure(fig: plt.Figure, filename: str, config: dict) -> None:
 def plot_execution_time_bars(df: pd.DataFrame, config: dict) -> None:
     dimensions = df['Dimension'].unique()
     fig, axes = plt.subplots(
-        3,
-        3,
+        2,
+        2,
         figsize=(7, 7),
         constrained_layout=True,
         sharex=True,
@@ -126,8 +127,8 @@ def plot_execution_time_dims(df: pd.DataFrame, config: dict) -> None:
 def plot_speedup_heatmap(df: pd.DataFrame, config: dict) -> None:
     dimensions = df['Dimension'].unique()
     fig, axes = plt.subplots(
-        3,
-        3,
+        2,
+        2,
         figsize=(7, 7),
         constrained_layout=True,
         sharex=True,
@@ -183,6 +184,21 @@ def plot_speedup_heatmap(df: pd.DataFrame, config: dict) -> None:
 
     _save_figure(fig, 'speedup_heatmap.pdf', config)
 
+def plot_convergence(df: pd.DataFrame, config: dict) -> None:
+    benchmarks = df['Benchmark'].unique()
+    dimensions = df['Dimension'].unique()
+    for benchmark in benchmarks:
+        for dimension in dimensions:
+            df_subset = df[
+                (df['Dimension'] == dimension) & (df['Benchmark'] == benchmark)
+            ]
+            fig, ax = plt.subplots()
+            for row in df_subset['Last Convergence History']:
+                sns.lineplot(data=row, ax=ax)
+                ax.set(xlabel='Iteration', ylabel='Fitness')
+                ax.set_title('Convergence History', fontweight='bold')
+            _save_figure(fig, f'convergence_{benchmark}_{dimension}d.pdf', config)
+
 def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
     for dim, df_dim in df.groupby('Dimension'):
         pivot_table = df_dim.pivot_table(
@@ -212,18 +228,35 @@ def generate_visualizations(df: pd.DataFrame) -> None:
 
     setup_styles(config)
 
-    print('Plotting execution time bars...')
-    plot_execution_time_bars(df, config)
+    # print('Plotting execution time bars...')
+    # plot_execution_time_bars(df, config)
 
-    print('Plotting execution time by dimensions...')
-    plot_execution_time_dims(df, config)
+    # print('Plotting execution time by dimensions...')
+    # plot_execution_time_dims(df, config)
 
-    print('Plotting speedup heatmap...')
-    plot_speedup_heatmap(df, config)
+    # print('Plotting speedup heatmap...')
+    # plot_speedup_heatmap(df, config)
 
-    print('Generating summary tables...')
-    generate_summary_tables(df, config)
+    # print('Generating summary tables...')
+    # generate_summary_tables(df, config)
+
+    print('Plotting convergence histories...')
+    plot_convergence(df, config)
+
+def parse_convergence_history(s: str) -> list[float]:
+    try:
+        clean_s = str(s).strip('[]" ')
+        if not clean_s:
+            return []
+        return [float(x) for x in clean_s.split(',')]
+    except ValueError as e:
+        print(f'Erro ao converter linha: {s[:50]}... -> {e}')
+        return []
 
 if __name__ == '__main__':
-    df = pd.read_csv('./results/experiment_results.csv')
+    df = pd.read_csv(
+        './results/experiment_results.csv',
+        converters={'Last Convergence History': parse_convergence_history},
+    )
+
     generate_visualizations(df)

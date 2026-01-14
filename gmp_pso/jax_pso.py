@@ -103,41 +103,6 @@ def jax_pso(
             global_improved, current_g_best_fit, swarm_state.g_best_fit,
         )
 
-        # def gradient_descent_step(
-        #         g_best_pos: jnp.array,
-        #         gradient_fn: callable,
-        #         lower: float,
-        #         upper: float,
-        #         eta: float,
-        #     ) -> jnp.array:
-        #     gradient = gradient_fn(g_best_pos)
-        #     new_g_best_pos = g_best_pos - eta * gradient
-        #     return jnp.clip(new_g_best_pos, lower, upper)
-
-        # gradient_fn = grad(objective_fn)
-
-        # gradient = gradient_fn(new_g_best_pos)
-        # new_g_best_pos = new_g_best_pos - eta * gradient
-        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
-
-        # gradient = gradient_fn(new_g_best_pos)
-        # new_g_best_pos = new_g_best_pos - eta * gradient
-        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
-
-        # gradient = gradient_fn(new_g_best_pos)
-        # new_g_best_pos = new_g_best_pos - eta * gradient
-        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
-
-        # gradient = gradient_fn(new_g_best_pos)
-        # new_g_best_pos = new_g_best_pos - eta * gradient
-        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
-
-        # gradient = gradient_fn(new_g_best_pos)
-        # new_g_best_pos = new_g_best_pos - eta * gradient
-        # new_g_best_pos = jnp.clip(new_g_best_pos, lower, upper)
-
-        # new_g_best_fit = objective_fn(new_g_best_pos)
-
         i = swarm_state.i + 1
         new_history = swarm_state.history.at[i].set(new_g_best_fit)
 

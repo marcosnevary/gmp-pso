@@ -36,7 +36,8 @@ def numpy_pso(
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
 
-    history = np.array([g_best_fit])
+    history = np.zeros(max_iters)
+    history[0] = g_best_fit
 
     swarm_state = SwarmState(
         positions=init_positions,
@@ -49,7 +50,7 @@ def numpy_pso(
         history=history,
     )
 
-    for _ in range(max_iters):
+    for i in range(max_iters):
         r1 = swarm_state.rng.random((num_particles, num_dims))
         r2 = swarm_state.rng.random((num_particles, num_dims))
 
@@ -61,18 +62,25 @@ def numpy_pso(
         new_positions = swarm_state.positions + new_velocities
         new_positions = np.clip(new_positions, lower, upper)
 
-        current_fitness = np.array([objective_fn(pos) for pos in new_positions])
+        new_fitness = np.array([objective_fn(pos) for pos in new_positions])
 
-        improved = current_fitness < swarm_state.p_best_fit
+        improved = new_fitness < swarm_state.p_best_fit
         mask = improved[:, None]
         new_p_best_pos = np.where(mask, new_positions, swarm_state.p_best_pos)
-        new_p_best_fit = np.where(improved, current_fitness, swarm_state.p_best_fit)
+        new_p_best_fit = np.where(improved, new_fitness, swarm_state.p_best_fit)
 
-        best_idx = np.argmin(current_fitness)
-        new_g_best_pos = new_positions[best_idx].copy()
-        new_g_best_fit = current_fitness[best_idx]
+        current_g_best_idx = np.argmin(new_p_best_fit)
+        current_g_best_fit = new_p_best_fit[current_g_best_idx]
+        global_improved = current_g_best_fit < swarm_state.g_best_fit
+        new_g_best_pos = np.where(
+            global_improved, new_p_best_pos[current_g_best_idx], swarm_state.g_best_pos,
+        )
+        new_g_best_fit = np.where(
+            global_improved, current_g_best_fit, swarm_state.g_best_fit,
+        )
 
-        new_history = np.append(swarm_state.history, new_g_best_fit)
+        new_history = swarm_state.history
+        new_history[i] = new_g_best_fit
 
         swarm_state = SwarmState(
             positions=new_positions,

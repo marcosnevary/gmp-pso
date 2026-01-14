@@ -53,7 +53,7 @@ def run_experiment() -> list[dict]:
                             'Execution Times': execution_times,
                             'Mean of Execution Times (s)': mean_time,
                             'Standard Deviation of Execution Times (s)': std_time,
-                            'Last Convergence History': result[2],
+                            'Last Convergence History': result[2][0].tolist() if algorithm_name == 'JAX PSO' else result[2].tolist(),
                         },
                     ],
                 )

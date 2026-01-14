@@ -90,19 +90,19 @@ BENCHMARKS = {
 
 ALGORITHMS = {
     # 'Python PSO': python_pso,
-    # 'NumPy PSO': numpy_pso,
+    'NumPy PSO': numpy_pso,
     'JAX PSO': parallel_jax_pso,
 }
 
-DIMS = [500] # 2, 4, 8, 16, 32, 64, 128, 256,
+DIMS = [10, 50, 100] # 2, 4, 8, 16, 32, 64, 128, 256,
 
 HYPERPARAMETERS = {
     'num_dims': None,
-    'num_particles': 10000,
-    'max_iters': 1000,
-    'c1': 2.5,
-    'c2': 1.5,
-    'w': 0.4,
+    'num_particles': 100,
+    'max_iters': 500,
+    'c1': 2,
+    'c2': 2,
+    'w': 0.7,
     'seed': 42,
     'eta': 0.01,
     'num_subswarms': 1,
