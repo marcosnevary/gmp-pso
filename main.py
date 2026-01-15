@@ -44,6 +44,11 @@ def run_experiment() -> list[dict]:
                 mean_time = float(jnp.mean(jnp.array(execution_times)))
                 std_time = float(jnp.std(jnp.array(execution_times)))
 
+                if algorithm_name == 'JAX PSO':
+                    history = result[2][0].tolist()
+                else:
+                    history = result[2].tolist()
+
                 results.extend(
                     [
                         {
@@ -53,7 +58,7 @@ def run_experiment() -> list[dict]:
                             'Execution Times': execution_times,
                             'Mean of Execution Times (s)': mean_time,
                             'Standard Deviation of Execution Times (s)': std_time,
-                            'Last Convergence History': result[2][0].tolist() if algorithm_name == 'JAX PSO' else result[2].tolist(),
+                            'Last History': history,
                         },
                     ],
                 )

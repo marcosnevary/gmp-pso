@@ -187,16 +187,25 @@ def plot_speedup_heatmap(df: pd.DataFrame, config: dict) -> None:
 def plot_convergence(df: pd.DataFrame, config: dict) -> None:
     benchmarks = df['Benchmark'].unique()
     dimensions = df['Dimension'].unique()
+
     for benchmark in benchmarks:
         for dimension in dimensions:
             df_subset = df[
                 (df['Dimension'] == dimension) & (df['Benchmark'] == benchmark)
             ]
+
             fig, ax = plt.subplots()
-            for row in df_subset['Last Convergence History']:
-                sns.lineplot(data=row, ax=ax)
-                ax.set(xlabel='Iteration', ylabel='Fitness')
-                ax.set_title('Convergence History', fontweight='bold')
+
+            for _, row in df_subset.iterrows():
+                sns.lineplot(
+                    data=row['Last History'],
+                    ax=ax,
+                    label=row['Algorithm'],
+                )
+
+            ax.set(xlabel='Iteration', ylabel='Fitness')
+            ax.set_title('Convergence History', fontweight='bold')
+            ax.legend(title='Algorithms')
             _save_figure(fig, f'convergence_{benchmark}_{dimension}d.pdf', config)
 
 def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
@@ -243,20 +252,7 @@ def generate_visualizations(df: pd.DataFrame) -> None:
     print('Plotting convergence histories...')
     plot_convergence(df, config)
 
-def parse_convergence_history(s: str) -> list[float]:
-    try:
-        clean_s = str(s).strip('[]" ')
-        if not clean_s:
-            return []
-        return [float(x) for x in clean_s.split(',')]
-    except ValueError as e:
-        print(f'Erro ao converter linha: {s[:50]}... -> {e}')
-        return []
-
 if __name__ == '__main__':
-    df = pd.read_csv(
-        './results/experiment_results.csv',
-        converters={'Last Convergence History': parse_convergence_history},
-    )
-
+    df = pd.read_csv('./results/experiment_results.csv')
+    df['Last History'] = df['Last History'].apply(ast.literal_eval)
     generate_visualizations(df)
