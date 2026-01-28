@@ -43,6 +43,7 @@ def jax_pso(
     key: random.PRNGKey,
     eta: float,
     max_epochs: int,
+    gradient: bool,
 ) -> tuple:
     lower, upper = bounds
     k_pos, k_vel, k_state = random.split(key, 3)
@@ -134,7 +135,7 @@ def jax_pso(
             return candidate_g_pos, candidate_g_fit
 
         gradient_g_pos, gradient_g_fit = lax.cond(
-            i % 10 == 0,
+            jnp.logical_and(i % 10 == 0, gradient),
             apply_gradient,
             skip_gradient,
             None,

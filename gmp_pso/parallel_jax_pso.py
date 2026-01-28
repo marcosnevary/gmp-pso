@@ -15,15 +15,16 @@ def parallel_jax_pso(
     w: float,
     seed: int,
     eta: float,
-    max_epochs: int,
+    steps: int,
     num_subswarms: int,
+    gradient: bool,
 ) -> tuple:
     key = random.PRNGKey(seed)
     keys = random.split(key, num_subswarms)
 
     parallel_pso = vmap(
         jax_pso,
-        in_axes=(None, None, None, None, None, None, None, None, 0, None, None),
+        in_axes=(None, None, None, None, None, None, None, None, 0, None, None, None),
     )
 
     all_best_positions, all_best_fitnesses, all_histories = parallel_pso(
@@ -37,7 +38,8 @@ def parallel_jax_pso(
         w,
         keys,
         eta,
-        max_epochs,
+        steps,
+        gradient,
     )
 
     idx_best_subwarm = jnp.argmin(all_best_fitnesses)

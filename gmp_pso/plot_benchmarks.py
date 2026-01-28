@@ -25,7 +25,7 @@ def plot_execution_time_bars(df: pd.DataFrame, config: dict) -> None:
     dimensions = df['Dimension'].unique()
     fig, axes = plt.subplots(
         2,
-        2,
+        len(dimensions) // 2,
         figsize=(7, 7),
         constrained_layout=True,
         sharex=True,
@@ -128,7 +128,7 @@ def plot_speedup_heatmap(df: pd.DataFrame, config: dict) -> None:
     dimensions = df['Dimension'].unique()
     fig, axes = plt.subplots(
         2,
-        2,
+        len(dimensions) // 2,
         figsize=(7, 7),
         constrained_layout=True,
         sharex=True,
@@ -172,8 +172,8 @@ def plot_speedup_heatmap(df: pd.DataFrame, config: dict) -> None:
             fmt='.1f',
             cmap=config['palette'],
             ax=ax,
-            cbar=(i in {2, 5, 8}),
-            cbar_kws={'label': 'Speedup Factor'} if i in {5} else {},
+            cbar=(i in {2, 3, 6}),
+            cbar_kws={'label': 'Speedup Factor'} if i in {3} else {},
         )
 
         ax.set_title(f'Dimension = {dim}', fontweight='bold')
@@ -208,6 +208,32 @@ def plot_convergence(df: pd.DataFrame, config: dict) -> None:
             ax.legend(title='Algorithms')
             _save_figure(fig, f'convergence_{benchmark}_{dimension}d.pdf', config)
 
+def plot_histogram(df: pd.DataFrame, config: dict) -> None:
+    benchmarks = df['Benchmark'].unique()
+    dimensions = df['Dimension'].unique()
+
+    for benchmark in benchmarks:
+        for dimension in dimensions:
+            df_subset = df[
+                (df['Dimension'] == dimension) & (df['Benchmark'] == benchmark)
+            ]
+
+            fig, ax = plt.subplots()
+
+            for _, row in df_subset.iterrows():
+                sns.histplot(
+                    data=row['Execution Times'][1:],
+                    ax=ax,
+                    label=row['Algorithm'],
+                )
+
+            ax.set(xlabel='Execution Time (s)', ylabel='Frequency')
+            ax.set_title('Execution Time Histogram', fontweight='bold')
+            ax.legend(title='Algorithms')
+            _save_figure(
+                fig, f'execution_time_histogram_{benchmark}_{dimension}d.pdf', config,
+            )
+
 def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
     for dim, df_dim in df.groupby('Dimension'):
         pivot_table = df_dim.pivot_table(
@@ -217,7 +243,6 @@ def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
         )
         save_path = config['output_path'] / f'execution_time_table_{dim}d.csv'
         pivot_table.to_csv(save_path)
-
 
 def generate_visualizations(df: pd.DataFrame) -> None:
     config = {
@@ -237,22 +262,26 @@ def generate_visualizations(df: pd.DataFrame) -> None:
 
     setup_styles(config)
 
-    # print('Plotting execution time bars...')
-    # plot_execution_time_bars(df, config)
+    print('Plotting execution time bars...')
+    plot_execution_time_bars(df, config)
 
-    # print('Plotting execution time by dimensions...')
-    # plot_execution_time_dims(df, config)
+    print('Plotting execution time by dimensions...')
+    plot_execution_time_dims(df, config)
 
-    # print('Plotting speedup heatmap...')
-    # plot_speedup_heatmap(df, config)
+    print('Plotting speedup heatmap...')
+    plot_speedup_heatmap(df, config)
 
-    # print('Generating summary tables...')
-    # generate_summary_tables(df, config)
+    print('Generating summary tables...')
+    generate_summary_tables(df, config)
 
     print('Plotting convergence histories...')
     plot_convergence(df, config)
 
+    print('Plotting execution time histograms...')
+    plot_histogram(df, config)
+
 if __name__ == '__main__':
     df = pd.read_csv('./results/experiment_results.csv')
     df['Last History'] = df['Last History'].apply(ast.literal_eval)
+    df['Execution Times'] = df['Execution Times'].apply(ast.literal_eval)
     generate_visualizations(df)

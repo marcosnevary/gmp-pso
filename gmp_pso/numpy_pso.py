@@ -5,7 +5,7 @@ import numpy as np
 
 class SwarmState(NamedTuple):
     positions: np.ndarray
-    velocities: np.ndarray
+    velocities: np.ndarraySwarmState
     p_best_pos: np.ndarray
     p_best_fit: np.ndarray
     g_best_pos: np.ndarray
@@ -29,7 +29,7 @@ def numpy_pso(
     rng = np.random.default_rng(seed)
 
     init_positions = rng.uniform(lower, upper, (num_particles, num_dims))
-    init_velocities = rng.uniform(-1.0, 1.0, (num_particles, num_dims))
+    init_velocities = np.zeros((num_particles, num_dims))
     init_fitness = np.array([objective_fn(position) for position in init_positions])
 
     best_idx = np.argmin(init_fitness)

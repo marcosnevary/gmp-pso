@@ -92,19 +92,20 @@ ALGORITHMS = {
     'JAX PSO': parallel_jax_pso,
 }
 
-DIMS = [10, 30, 50] # 2, 4, 8, 16, 32, 64, 128, 256,
+DIMS = [100, 500]
 
 HYPERPARAMETERS = {
     'num_dims': None,
-    'num_particles': 100,
-    'max_iters': 2000,
-    'c1': 2.5,
-    'c2': 1.5,
-    'w': 0.4,
+    'num_particles': 30,
+    'max_iters': 1000,
+    'c1': 2.0,
+    'c2': 2.0,
+    'w': 0.7,
     'seed': 42,
-    'eta': 0.0001,
-    'max_epochs': 100,
+    'eta': 0.001,
+    'steps': 5,
     'num_subswarms': 1,
+    'gradient': True,
 }
 
-NUM_RUNS = 1
+NUM_RUNS = 20
