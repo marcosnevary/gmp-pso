@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax import grad, jit, lax, random, vmap
 
 
-class SwarmState(NamedTuple):
+class JaxSwarmState(NamedTuple):
     positions: jnp.ndarray
     velocities: jnp.ndarray
     p_best_pos: jnp.ndarray
@@ -14,24 +14,30 @@ class SwarmState(NamedTuple):
     g_best_fit: jnp.ndarray
     rng: random.PRNGKey
 
+
 class GradientState(NamedTuple):
     new_g_best_pos: jnp.ndarray
     lower: jnp.ndarray
     upper: jnp.ndarray
     eta: float
 
+
 @partial(
     jit,
     static_argnames=(
-        'objective_fn',
-        'bounds',
-        'num_dims',
-        'num_particles',
-        'max_iters',
-        'max_epochs',
+        "objective_fn",
+        "bounds",
+        "num_dims",
+        "num_particles",
+        "max_iters",
+        "c1",
+        "c2",
+        "w",
+        "eta",
+        "steps",
     ),
 )
-def jax_pso(
+def jax_gd_pso(
     objective_fn: callable,
     bounds: tuple,
     num_dims: int,
@@ -40,11 +46,11 @@ def jax_pso(
     c1: float,
     c2: float,
     w: float,
-    key: random.PRNGKey,
+    seed: random.PRNGKey,
     eta: float,
-    max_epochs: int,
-    gradient: bool,
+    steps: int,
 ) -> tuple:
+    key = seed
     lower, upper = bounds
     k_pos, k_vel, k_state = random.split(key, 3)
 
@@ -53,10 +59,16 @@ def jax_pso(
     limit = search_range * velocity_scale
 
     init_positions = random.uniform(
-        k_pos, (num_particles, num_dims), minval=lower, maxval=upper,
+        k_pos,
+        (num_particles, num_dims),
+        minval=lower,
+        maxval=upper,
     )
     init_velocities = random.uniform(
-        k_vel, (num_particles, num_dims), minval=-limit, maxval=limit,
+        k_vel,
+        (num_particles, num_dims),
+        minval=-limit,
+        maxval=limit,
     )
     init_fitness = vmap(objective_fn)(init_positions)
 
@@ -64,7 +76,7 @@ def jax_pso(
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
 
-    initial_state = SwarmState(
+    initial_state = JaxSwarmState(
         positions=init_positions,
         velocities=init_velocities,
         p_best_pos=init_positions,
@@ -76,7 +88,7 @@ def jax_pso(
 
     gradient_fn = grad(objective_fn)
 
-    def update_step(swarm_state: SwarmState, i: int) -> tuple:
+    def update_step(swarm_state: JaxSwarmState, i: int) -> tuple:
         k1, k2, k_next = random.split(swarm_state.rng, 3)
         r1 = random.uniform(k1, (num_particles, num_dims))
         r2 = random.uniform(k2, (num_particles, num_dims))
@@ -101,10 +113,14 @@ def jax_pso(
 
         global_improved = current_g_best_fit < swarm_state.g_best_fit
         candidate_g_pos = jnp.where(
-            global_improved, new_p_best_pos[current_g_best_idx], swarm_state.g_best_pos,
+            global_improved,
+            new_p_best_pos[current_g_best_idx],
+            swarm_state.g_best_pos,
         )
         candidate_g_fit = jnp.where(
-            global_improved, current_g_best_fit, swarm_state.g_best_fit,
+            global_improved,
+            current_g_best_fit,
+            swarm_state.g_best_fit,
         )
 
         def gradient_descent_step(g_state: GradientState, _: None) -> tuple:
@@ -126,7 +142,7 @@ def jax_pso(
                 gradient_descent_step,
                 init_grad_state,
                 None,
-                max_epochs,
+                steps,
             )
             final_pos = final_grad_state.new_g_best_pos
             return final_pos, objective_fn(final_pos)
@@ -135,7 +151,7 @@ def jax_pso(
             return candidate_g_pos, candidate_g_fit
 
         gradient_g_pos, gradient_g_fit = lax.cond(
-            jnp.logical_and(i % 10 == 0, gradient),
+            i % 10 == 0,
             apply_gradient,
             skip_gradient,
             None,
@@ -145,7 +161,7 @@ def jax_pso(
         final_g_pos = jnp.where(global_improved, gradient_g_pos, candidate_g_pos)
         final_g_fit = jnp.where(global_improved, gradient_g_fit, candidate_g_fit)
 
-        next_state = SwarmState(
+        next_state = JaxSwarmState(
             positions=new_positions,
             velocities=new_velocities,
             p_best_pos=new_p_best_pos,

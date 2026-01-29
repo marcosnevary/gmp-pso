@@ -12,6 +12,7 @@ class SwarmState(NamedTuple):
     rng: random.Random
     history: list
 
+
 def python_pso(
     objective_fn: callable,
     bounds: tuple,
@@ -28,8 +29,7 @@ def python_pso(
     rng = random.Random(seed)
 
     init_positions = [
-        [rng.uniform(lower, upper) for _ in range(num_dims)]
-        for _ in range(num_particles)
+        [rng.uniform(lower, upper) for _ in range(num_dims)] for _ in range(num_particles)
     ]
     init_velocities = [
         [rng.uniform(-1.0, 1.0) for _ in range(num_dims)] for _ in range(num_particles)
@@ -54,41 +54,26 @@ def python_pso(
     )
 
     for _ in range(max_iters):
-        r1 = [
-            [swarm_state.rng.random() for _ in range(num_dims)]
-            for _ in range(num_particles)
-        ]
-        r2 = [
-            [swarm_state.rng.random() for _ in range(num_dims)]
-            for _ in range(num_particles)
-        ]
-        inertia = [
-            [w * v for v in swarm_state.velocities[i]] for i in range(num_particles)
-        ]
+        r1 = [[swarm_state.rng.random() for _ in range(num_dims)] for _ in range(num_particles)]
+        r2 = [[swarm_state.rng.random() for _ in range(num_dims)] for _ in range(num_particles)]
+        inertia = [[w * v for v in swarm_state.velocities[i]] for i in range(num_particles)]
         cognitive = [
             [
-                c1 * r1[i][d] * (
-                    swarm_state.p_best_pos[i][d] - swarm_state.positions[i][d]
-                )
+                c1 * r1[i][d] * (swarm_state.p_best_pos[i][d] - swarm_state.positions[i][d])
                 for d in range(num_dims)
             ]
             for i in range(num_particles)
         ]
         social = [
             [
-                c2 * r2[i][d] * (
-                    swarm_state.g_best_pos[d] - swarm_state.positions[i][d]
-                )
+                c2 * r2[i][d] * (swarm_state.g_best_pos[d] - swarm_state.positions[i][d])
                 for d in range(num_dims)
             ]
             for i in range(num_particles)
         ]
 
         new_velocities = [
-            [
-                inertia[i][d] + cognitive[i][d] + social[i][d]
-                for d in range(num_dims)
-            ]
+            [inertia[i][d] + cognitive[i][d] + social[i][d] for d in range(num_dims)]
             for i in range(num_particles)
         ]
         new_positions = [

@@ -5,13 +5,14 @@ import numpy as np
 
 class SwarmState(NamedTuple):
     positions: np.ndarray
-    velocities: np.ndarraySwarmState
+    velocities: np.ndarray
     p_best_pos: np.ndarray
     p_best_fit: np.ndarray
     g_best_pos: np.ndarray
     g_best_fit: np.ndarray
     rng: np.random.Generator
     history: np.ndarray
+
 
 def numpy_pso(
     objective_fn: callable,
@@ -73,10 +74,14 @@ def numpy_pso(
         current_g_best_fit = new_p_best_fit[current_g_best_idx]
         global_improved = current_g_best_fit < swarm_state.g_best_fit
         new_g_best_pos = np.where(
-            global_improved, new_p_best_pos[current_g_best_idx], swarm_state.g_best_pos,
+            global_improved,
+            new_p_best_pos[current_g_best_idx],
+            swarm_state.g_best_pos,
         )
         new_g_best_fit = np.where(
-            global_improved, current_g_best_fit, swarm_state.g_best_fit,
+            global_improved,
+            current_g_best_fit,
+            swarm_state.g_best_fit,
         )
 
         new_history = swarm_state.history
