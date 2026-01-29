@@ -1,0 +1,26 @@
+\begin{table}[h]
+\caption{Convergence comparison (Mean Fitness $\pm$ Std Dev). Best results in bold.}
+\label{tab:convergence}
+\begin{tabular}{llcc}
+\toprule
+Benchmark & Dimension & JAX-GD-PSO & PSO \\
+\midrule
+Ackley & 10 & 1.15e+00 $\pm$ 1.62e-01 & \textbf{9.64e-01 $\pm$ 2.73e-01} \\
+Ackley & 100 & \textbf{1.89e+01 $\pm$ 2.38e-01} & 1.90e+01 $\pm$ 1.90e-01 \\
+Ackley & 500 & \textbf{2.06e+01 $\pm$ 1.67e-02} & 2.06e+01 $\pm$ 1.65e-02 \\
+Ackley & 1000 & \textbf{2.08e+01 $\pm$ 4.47e-03} & 2.08e+01 $\pm$ 1.34e-02 \\
+Rastrigin & 10 & 1.50e+01 $\pm$ 2.68e+00 & \textbf{1.45e+01 $\pm$ 2.73e+00} \\
+Rastrigin & 100 & 8.52e+02 $\pm$ 1.11e+01 & \textbf{8.32e+02 $\pm$ 1.50e+01} \\
+Rastrigin & 500 & \textbf{6.54e+03 $\pm$ 4.71e+01} & 6.62e+03 $\pm$ 2.62e+01 \\
+Rastrigin & 1000 & 1.45e+04 $\pm$ 3.19e+01 & \textbf{1.45e+04 $\pm$ 7.91e+01} \\
+Rosenbrock & 10 & \textbf{8.44e+02 $\pm$ 4.35e+03} & 8.55e+02 $\pm$ 2.90e+03 \\
+Rosenbrock & 100 & 1.17e+06 $\pm$ 1.22e+05 & \textbf{1.02e+06 $\pm$ 3.94e+04} \\
+Rosenbrock & 500 & \textbf{2.43e+07 $\pm$ 2.22e+05} & 2.44e+07 $\pm$ 1.88e+05 \\
+Rosenbrock & 1000 & 7.12e+07 $\pm$ 3.10e+05 & \textbf{6.81e+07 $\pm$ 2.62e+05} \\
+Sphere & 10 & \textbf{2.94e-01 $\pm$ 5.69e-01} & 3.14e-01 $\pm$ 7.88e-01 \\
+Sphere & 100 & \textbf{2.70e+01 $\pm$ 8.81e+00} & 1.55e+02 $\pm$ 6.14e+00 \\
+Sphere & 500 & \textbf{1.67e+02 $\pm$ 3.86e+01} & 2.48e+03 $\pm$ 7.28e+00 \\
+Sphere & 1000 & \textbf{3.38e+02 $\pm$ 5.58e+01} & 5.97e+03 $\pm$ 2.19e+01 \\
+\bottomrule
+\end{tabular}
+\end{table}

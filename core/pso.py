@@ -14,7 +14,7 @@ class SwarmState(NamedTuple):
     history: np.ndarray
 
 
-def numpy_pso(
+def pso(
     objective_fn: callable,
     bounds: tuple,
     num_dims: int,

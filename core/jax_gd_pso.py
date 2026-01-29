@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax import grad, jit, lax, random, vmap
 
 
-class JaxSwarmState(NamedTuple):
+class JaxGdSwarmState(NamedTuple):
     positions: jnp.ndarray
     velocities: jnp.ndarray
     p_best_pos: jnp.ndarray
@@ -16,24 +16,16 @@ class JaxSwarmState(NamedTuple):
 
 
 class GradientState(NamedTuple):
-    new_g_best_pos: jnp.ndarray
-    lower: jnp.ndarray
-    upper: jnp.ndarray
-    eta: float
+    current_pos: jnp.ndarray
 
 
 @partial(
     jit,
     static_argnames=(
         "objective_fn",
-        "bounds",
         "num_dims",
         "num_particles",
         "max_iters",
-        "c1",
-        "c2",
-        "w",
-        "eta",
         "steps",
     ),
 )
@@ -51,32 +43,22 @@ def jax_gd_pso(
     steps: int,
 ) -> tuple:
     key = seed
-    lower, upper = bounds
+    lower, upper = jnp.array(bounds[0]), jnp.array(bounds[1])
     k_pos, k_vel, k_state = random.split(key, 3)
 
     search_range = upper - lower
     velocity_scale = 0.1
     limit = search_range * velocity_scale
 
-    init_positions = random.uniform(
-        k_pos,
-        (num_particles, num_dims),
-        minval=lower,
-        maxval=upper,
-    )
-    init_velocities = random.uniform(
-        k_vel,
-        (num_particles, num_dims),
-        minval=-limit,
-        maxval=limit,
-    )
+    init_positions = random.uniform(k_pos, (num_particles, num_dims), minval=lower, maxval=upper)
+    init_velocities = random.uniform(k_vel, (num_particles, num_dims), minval=-limit, maxval=limit)
     init_fitness = vmap(objective_fn)(init_positions)
 
     best_idx = jnp.argmin(init_fitness)
     g_best_pos = init_positions[best_idx]
     g_best_fit = init_fitness[best_idx]
 
-    initial_state = JaxSwarmState(
+    initial_state = JaxGdSwarmState(
         positions=init_positions,
         velocities=init_velocities,
         p_best_pos=init_positions,
@@ -88,7 +70,7 @@ def jax_gd_pso(
 
     gradient_fn = grad(objective_fn)
 
-    def update_step(swarm_state: JaxSwarmState, i: int) -> tuple:
+    def update_step(swarm_state: JaxGdSwarmState, i: int) -> tuple:
         k1, k2, k_next = random.split(swarm_state.rng, 3)
         r1 = random.uniform(k1, (num_particles, num_dims))
         r2 = random.uniform(k2, (num_particles, num_dims))
@@ -104,48 +86,40 @@ def jax_gd_pso(
         new_fitness = vmap(objective_fn)(new_positions)
 
         improved = new_fitness < swarm_state.p_best_fit
-        mask = improved[:, None]
-        new_p_best_pos = jnp.where(mask, new_positions, swarm_state.p_best_pos)
+
+        new_p_best_pos = jnp.where(improved[:, None], new_positions, swarm_state.p_best_pos)
         new_p_best_fit = jnp.where(improved, new_fitness, swarm_state.p_best_fit)
 
         current_g_best_idx = jnp.argmin(new_p_best_fit)
         current_g_best_fit = new_p_best_fit[current_g_best_idx]
 
         global_improved = current_g_best_fit < swarm_state.g_best_fit
+
         candidate_g_pos = jnp.where(
             global_improved,
             new_p_best_pos[current_g_best_idx],
             swarm_state.g_best_pos,
         )
-        candidate_g_fit = jnp.where(
-            global_improved,
-            current_g_best_fit,
-            swarm_state.g_best_fit,
-        )
+
+        candidate_g_fit = jnp.where(global_improved, current_g_best_fit, swarm_state.g_best_fit)
 
         def gradient_descent_step(g_state: GradientState, _: None) -> tuple:
-            grads = gradient_fn(g_state.new_g_best_pos)
-            step = g_state.eta * grads
-            updated_pos = g_state.new_g_best_pos - step
-            updated_pos = jnp.clip(updated_pos, g_state.lower, g_state.upper)
-            next_state = GradientState(
-                new_g_best_pos=updated_pos,
-                lower=g_state.lower,
-                upper=g_state.upper,
-                eta=g_state.eta,
-            )
-            return next_state, None
+            grads = gradient_fn(g_state.current_pos)
+            updated_pos = g_state.current_pos - eta * grads
+            updated_pos = jnp.clip(updated_pos, lower, upper)
+            return GradientState(updated_pos), None
 
         def apply_gradient(_: None) -> tuple:
-            init_grad_state = GradientState(candidate_g_pos, lower, upper, eta)
+            init_grad_state = GradientState(candidate_g_pos)
             final_grad_state, _ = lax.scan(
                 gradient_descent_step,
                 init_grad_state,
                 None,
                 steps,
             )
-            final_pos = final_grad_state.new_g_best_pos
-            return final_pos, objective_fn(final_pos)
+            final_pos = final_grad_state.current_pos
+            final_fit = objective_fn(final_pos)
+            return final_pos, final_fit
 
         def skip_gradient(_: None) -> tuple:
             return candidate_g_pos, candidate_g_fit
@@ -157,15 +131,34 @@ def jax_gd_pso(
             None,
         )
 
-        global_improved = gradient_g_fit < candidate_g_fit
-        final_g_pos = jnp.where(global_improved, gradient_g_pos, candidate_g_pos)
-        final_g_fit = jnp.where(global_improved, gradient_g_fit, candidate_g_fit)
+        gd_improved = gradient_g_fit < candidate_g_fit
+        final_g_pos = jnp.where(gd_improved, gradient_g_pos, candidate_g_pos)
+        final_g_fit = jnp.where(gd_improved, gradient_g_fit, candidate_g_fit)
 
-        next_state = JaxSwarmState(
+        any_improvement = final_g_fit < swarm_state.g_best_fit
+
+        target_idx = current_g_best_idx
+
+        mask_winner = (jnp.arange(num_particles) == target_idx)[:, None]
+        should_update_mask = (gd_improved & any_improvement) & mask_winner
+
+        final_p_best_pos = jnp.where(
+            should_update_mask,
+            final_g_pos,
+            new_p_best_pos,
+        )
+
+        final_p_best_fit = jnp.where(
+            (gd_improved & any_improvement) & (jnp.arange(num_particles) == target_idx),
+            final_g_fit,
+            new_p_best_fit,
+        )
+
+        next_state = JaxGdSwarmState(
             positions=new_positions,
             velocities=new_velocities,
-            p_best_pos=new_p_best_pos,
-            p_best_fit=new_p_best_fit,
+            p_best_pos=final_p_best_pos,
+            p_best_fit=final_p_best_fit,
             g_best_pos=final_g_pos,
             g_best_fit=final_g_fit,
             rng=k_next,

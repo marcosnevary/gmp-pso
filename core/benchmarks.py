@@ -1,31 +1,9 @@
-import math
-
 import jax.numpy as jnp
 import numpy as np
 from jax import jit
 
 from .jax_gd_pso import jax_gd_pso
-from .numpy_pso import numpy_pso
-
-
-def ackley_py(x: list) -> float:
-    n = len(x)
-    sum1 = sum(xi**2 for xi in x)
-    sum2 = sum(math.cos(2 * math.pi * xi) for xi in x)
-    return -20 * math.exp(-0.2 * math.sqrt(sum1 / n)) - math.exp(sum2 / n) + 20 + math.e
-
-
-def rastrigin_py(x: list) -> float:
-    n = len(x)
-    return 10 * n + sum(xi**2 - 10 * math.cos(2 * math.pi * xi) for xi in x)
-
-
-def sphere_py(x: list) -> float:
-    return sum(xi**2 for xi in x)
-
-
-def rosenbrock_py(x: list) -> float:
-    return sum(100 * (x[i + 1] - x[i] ** 2) ** 2 + (x[i] - 1) ** 2 for i in range(len(x) - 1))
+from .pso import pso
 
 
 def ackley_np(x: np.ndarray) -> float:
@@ -75,47 +53,43 @@ def rosenbrock_jax(x: jnp.ndarray) -> jnp.ndarray:
 BENCHMARKS = {
     "Ackley": {
         "bounds": (-32.768, 32.768),
-        "Python PSO": ackley_py,
-        "NumPy PSO": ackley_np,
-        "JAX PSO": ackley_jax,
+        "PSO": ackley_np,
+        "JAX-GD-PSO": ackley_jax,
     },
     "Rastrigin": {
         "bounds": (-5.12, 5.12),
-        "Python PSO": rastrigin_py,
-        "NumPy PSO": rastrigin_np,
-        "JAX PSO": rastrigin_jax,
+        "PSO": rastrigin_np,
+        "JAX-GD-PSO": rastrigin_jax,
     },
     "Rosenbrock": {
         "bounds": (-5.0, 10.0),
-        "Python PSO": rosenbrock_py,
-        "NumPy PSO": rosenbrock_np,
-        "JAX PSO": rosenbrock_jax,
+        "PSO": rosenbrock_np,
+        "JAX-GD-PSO": rosenbrock_jax,
     },
     "Sphere": {
         "bounds": (-5.12, 5.12),
-        "Python PSO": sphere_py,
-        "NumPy PSO": sphere_np,
-        "JAX PSO": sphere_jax,
+        "PSO": sphere_np,
+        "JAX-GD-PSO": sphere_jax,
     },
 }
 
 ALGORITHMS = {
-    "NumPy PSO": numpy_pso,
-    "JAX PSO": jax_gd_pso,
+    "PSO": pso,
+    "JAX-GD-PSO": jax_gd_pso,
 }
 
-DIMS = [10, 30, 50, 100]
+DIMS = [30, 100, 500, 1000]
 
 HYPERPARAMETERS = {
     "num_dims": None,
     "num_particles": 30,
-    "max_iters": 100,
+    "max_iters": 1000,
     "c1": 1.5,
     "c2": 1.5,
     "w": 0.7,
     "seed": None,
-    "eta": 0.001,
+    "eta": 0.01,
     "steps": 5,
 }
 
-NUM_RUNS = 10
+NUM_RUNS = 50

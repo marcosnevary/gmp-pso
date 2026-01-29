@@ -1,5 +1,7 @@
+import ast
 from pathlib import Path
 
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -7,123 +9,172 @@ import seaborn as sns
 
 def _save_figure(fig: plt.Figure, filename: str, config: dict) -> None:
     save_path = config["output_path"] / filename
-    fig.savefig(save_path, bbox_inches="tight")
+    fig.savefig(save_path, bbox_inches="tight", format="pdf", dpi=300)
     plt.close(fig)
 
 
-def plot_execution_time_dims(df: pd.DataFrame, config: dict) -> None:
+def plot_execution_time(df: pd.DataFrame, config: dict) -> None:
     benchmarks = df["Benchmark"].unique()
-    fig, axes = plt.subplots(
-        4,
-        4,
-        figsize=(7, 7),
-        constrained_layout=True,
-        sharex=True,
-        sharey=True,
-    )
-    axes_flat = axes.flatten()
+    algorithms = df["Algorithm"].unique()
+    dimensions = df["Dimension"].unique()
+    colors = sns.color_palette(config["palette"], n_colors=len(algorithms))
 
-    for ax, benchmark in zip(axes_flat, benchmarks, strict=True):
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    axes_flattened = axes.flatten()
+
+    for ax, benchmark in zip(axes_flattened, benchmarks):
         df_benchmark = df[df["Benchmark"] == benchmark]
-        algorithms = df_benchmark["Algorithm"].unique()
-        colors = sns.color_palette(n_colors=len(algorithms))
 
-        sns.lineplot(
-            data=df_benchmark,
-            x="Dimension",
-            y="Mean of Execution Times (s)",
-            hue="Algorithm",
-            marker="o",
-            palette=config["palette"],
-            ax=ax,
-        )
+        for idx, algorithm in enumerate(algorithms):
+            df_subset = df_benchmark[df_benchmark["Algorithm"] == algorithm]
+            mean = df_subset["Mean of Execution Times (s)"]
+            std = df_subset["Standard Deviation of Execution Times (s)"]
 
-        for algorithm, color in zip(algorithms, colors, strict=True):
-            data_algorithm = df_benchmark[df_benchmark["Algorithm"] == algorithm]
-            mean = data_algorithm["Mean of Execution Times (s)"]
-            std = data_algorithm["Standard Deviation of Execution Times (s)"]
+            ax.plot(dimensions, mean, marker="o", label=algorithm, color=colors[idx])
+            ax.fill_between(dimensions, mean - std, mean + std, color=colors[idx], alpha=0.2)
 
-            ax.fill_between(
-                data_algorithm["Dimension"],
-                mean - std,
-                mean + std,
-                color=color,
-                alpha=0.2,
-            )
-
+        ax.set_xlabel("Dimension")
+        ax.set_ylabel("Time (s)")
         ax.set_title(f"{benchmark}", fontweight="bold")
-        ax.set(xlabel="", ylabel="", yscale="log")
-        ax.get_legend().remove()
 
-    fig.supxlabel("Dimension", fontsize=8)
-    fig.supylabel("Mean of Execution Times (s)", fontsize=8)
+        if ax == axes_flattened[0]:
+            ax.legend(title="Algorithm")
 
-    handles, labels = axes_flat[0].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.05),
-        ncol=3,
-        frameon=False,
-    )
-
-    _save_figure(fig, "execution_time_dims.pdf", config)
+    plt.tight_layout()
+    _save_figure(fig, "execution_time_plot.pdf", config)
 
 
 def plot_convergence(df: pd.DataFrame, config: dict) -> None:
     benchmarks = df["Benchmark"].unique()
     dimensions = df["Dimension"].unique()
+    algorithms = df["Algorithm"].unique()
+    colors = sns.color_palette(config["palette"], n_colors=len(algorithms))
 
-    for benchmark in benchmarks:
-        for dimension in dimensions:
+    fig, axes = plt.subplots(4, 4, figsize=(16, 16))
+
+    for i, benchmark in enumerate(benchmarks):
+        for j, dimension in enumerate(dimensions):
+            ax = axes[i, j]
             df_subset = df[(df["Dimension"] == dimension) & (df["Benchmark"] == benchmark)]
 
-            fig, ax = plt.subplots()
+            for k, (_, row) in enumerate(df_subset.iterrows()):
+                mean_history = jnp.array(row["Mean Fitness History"])
+                std_history = jnp.array(row["Std Fitness History"])
+                iterations = range(len(mean_history))
 
-            for _, row in df_subset.iterrows():
-                sns.lineplot(
-                    data=row["Fitness History"],
-                    ax=ax,
-                    label=row["Algorithm"],
+                ax.plot(iterations, mean_history, label=row["Algorithm"], color=colors[k])
+                ax.fill_between(
+                    iterations,
+                    mean_history - std_history,
+                    mean_history + std_history,
+                    alpha=0.2,
+                    color=colors[k],
                 )
 
-            ax.set(xlabel="Iteration", ylabel="Fitness")
-            ax.set_title("Convergence History", fontweight="bold")
-            ax.legend(title="Algorithms")
-            _save_figure(fig, f"convergence_{benchmark}_{dimension}d.pdf", config)
+            ax.set_xlabel("Iteration")
+            ax.set_ylabel("Fitness")
+            ax.set_title(f"{benchmark} - {dimension}D", fontsize=10)
+
+    plt.tight_layout()
+    _save_figure(fig, "convergence_plot.pdf", config)
 
 
-def generate_summary_tables(df: pd.DataFrame, config: dict) -> None:
-    for dim, df_dim in df.groupby("Dimension"):
-        pivot_table = df_dim.pivot_table(
-            index="Benchmark",
-            columns="Algorithm",
-            values="Mean of Execution Times (s)",
-        )
-        save_path = config["output_path"] / f"execution_time_table_{dim}d.csv"
-        pivot_table.to_csv(save_path)
+def _generate_comparison_table(
+    df: pd.DataFrame,
+    config: dict,
+    mean_col: str,
+    std_col: str,
+    output_filename: str,
+    caption: str,
+    label: str,
+) -> None:
+    df_proc = df.copy()
+
+    df_proc["formatted"] = (
+        df_proc[mean_col].map("{:.2e}".format) + r" $\pm$ " + df_proc[std_col].map("{:.2e}".format)
+    )
+
+    df_pivot = df_proc.pivot_table(
+        index=["Benchmark", "Dimension"],
+        columns="Algorithm",
+        values=["formatted", mean_col],
+        aggfunc="first",
+    )
+
+    means = df_pivot[mean_col].fillna(float("inf"))
+
+    display_df = df_pivot["formatted"].copy()
+
+    for index, row in means.iterrows():
+        min_val = row.min()
+        is_min = row == min_val
+        for col in display_df.columns:
+            if is_min[col]:
+                display_df.loc[index, col] = f"\\textbf{{{display_df.loc[index, col]}}}"
+
+    display_df = display_df.reset_index()
+
+    output_path = config["output_path"] / output_filename
+
+    latex_code = display_df.style.hide(axis="index").to_latex(
+        column_format="llcc",
+        hrules=True,
+        caption=caption,
+        label=label,
+        position="h",
+    )
+
+    with output_path.open("w") as f:
+        f.write(latex_code)
 
 
-def generate_visualizations(df: pd.DataFrame) -> None:
-    config = {
-        "output_path": Path("./results/"),
-        "palette": "viridis",
-        "font": {
-            "font.size": 7,
-            "axes.titlesize": 9,
-            "legend.fontsize": 8,
-            "axes.labelsize": 10,
-            "xtick.labelsize": 7.5,
-            "ytick.labelsize": 7.5,
-        },
-    }
+def create_convergence_table(df: pd.DataFrame, config: dict) -> None:
+    _generate_comparison_table(
+        df=df,
+        config=config,
+        mean_col="Mean of Fitness",
+        std_col="Standard Deviation of Fitness",
+        output_filename="convergence_table.tex",
+        caption=r"Convergence comparison (Mean Fitness $\pm$ Std Dev). Best results in bold.",
+        label="tab:convergence",
+    )
 
-    print("Plotting execution time by dimensions...")
-    plot_execution_time_dims(df, config)
 
-    print("Generating summary tables...")
-    generate_summary_tables(df, config)
+def create_execution_time_table(df: pd.DataFrame, config: dict) -> None:
+    _generate_comparison_table(
+        df=df,
+        config=config,
+        mean_col="Mean of Execution Times (s)",
+        std_col="Standard Deviation of Execution Times (s)",
+        output_filename="execution_time_table.tex",
+        caption="Execution time comparison in seconds.",
+        label="tab:execution_time",
+    )
 
-    print("Plotting convergence histories...")
+
+def generate_visualizations(df: pd.DataFrame, config: dict) -> None:
+    print("Plotting convergence...")
     plot_convergence(df, config)
+
+    print("Plotting execution time...")
+    plot_execution_time(df, config)
+
+    print("Creating convergence table (LaTeX)...")
+    create_convergence_table(df, config)
+
+    print("Creating execution time table (LaTeX)...")
+    create_execution_time_table(df, config)
+
+
+config = {
+    "output_path": Path("./results/"),
+    "palette": "viridis",
+}
+
+
+if __name__ == "__main__":
+    results = pd.read_csv(config["output_path"] / "benchmark_results.csv")
+    results["Execution Time History"] = results["Execution Time History"].apply(ast.literal_eval)
+    results["Mean Fitness History"] = results["Mean Fitness History"].apply(ast.literal_eval)
+    results["Std Fitness History"] = results["Std Fitness History"].apply(ast.literal_eval)
+    generate_visualizations(results, config)

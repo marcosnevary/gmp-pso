@@ -35,28 +35,32 @@ def run_experiment() -> list[dict]:
                 for i in range(NUM_RUNS):
                     hyperparameters["seed"] = i
 
-                    if algorithm_name == "JAX PSO":
+                    if algorithm_name == "JAX-GD-PSO":
                         hyperparameters["seed"] = random.PRNGKey(i)
+                        algorithm_fn(objective_fn, bounds, **hyperparameters)
 
                     start = time.perf_counter()
                     result = algorithm_fn(objective_fn, bounds, **hyperparameters)
 
-                    if algorithm_name == "JAX PSO":
+                    if algorithm_name == "JAX-GD-PSO":
                         block_until_ready(result)
 
                     end = time.perf_counter()
                     execution_times.append(end - start)
 
-                    _, fitness, _ = result
+                    _, fitness, history = result
 
                     print(f"Iteration {i + 1} | Fitness: {fitness}")
-                    fitness_history.append(fitness)
+                    fitness_history.append(history)
+
+                mean_fitness_history = jnp.mean(jnp.array(fitness_history), axis=0)
+                std_fitness_history = jnp.std(jnp.array(fitness_history), axis=0)
 
                 mean_time = float(jnp.mean(jnp.array(execution_times)))
                 std_time = float(jnp.std(jnp.array(execution_times)))
 
-                mean_fitness = float(jnp.mean(jnp.array(fitness_history)))
-                std_fitness = float(jnp.std(jnp.array(fitness_history)))
+                mean_fitness = float(jnp.mean(mean_fitness_history))
+                std_fitness = float(jnp.std(std_fitness_history))
 
                 results.extend(
                     [
@@ -67,7 +71,8 @@ def run_experiment() -> list[dict]:
                             "Execution Time History": execution_times,
                             "Mean of Execution Times (s)": mean_time,
                             "Standard Deviation of Execution Times (s)": std_time,
-                            "Fitness History": fitness_history,
+                            "Mean Fitness History": mean_fitness_history.tolist(),
+                            "Std Fitness History": std_fitness_history.tolist(),
                             "Mean of Fitness": mean_fitness,
                             "Standard Deviation of Fitness": std_fitness,
                         },
@@ -81,5 +86,5 @@ if __name__ == "__main__":
     results = run_experiment()
 
     df = pd.DataFrame(results)
-    df.to_csv("./results/experiment_results.csv")
+    df.to_csv("./results/benchmark_results.csv")
     generate_visualizations(df)
